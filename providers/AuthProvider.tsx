@@ -44,13 +44,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (error) return console.error(error);
 
     // Insert results into Db
-    const { error: userError } = await supabase
-      .from("User")
-      .insert({
-        id: data?.user?.id,
-        username: username,
-        email: email,
-      });
+    const { error: userError } = await supabase.from("User").insert({
+      id: data?.user?.id,
+      username: username,
+      email: email,
+    });
     if (userError) return console.error(userError);
 
     getUser(data?.user?.id ?? "");
@@ -64,6 +62,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
     router.push("/(auth)");
   };
+
+  // If there is session navigate to HomePage
+  React.useEffect(() => {
+    const { data: authData } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (!session) return router.push("/(auth)");
+        getUser(session?.user?.id);
+      }
+    );
+    return () => {
+      authData.subscription.unsubscribe();
+    };
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, signIn, signUp, signOut }}>
