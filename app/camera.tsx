@@ -6,11 +6,20 @@ import {
   Camera,
 } from "expo-camera";
 import { useRef, useState, useEffect } from "react";
-import { Button, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Button,
+  Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { Audio } from "expo-av";
 import { supabase } from "@/utils/supabase";
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
+import { Video, ResizeMode } from "expo-av";
 
 export default function App() {
   const { user } = useAuth();
@@ -20,7 +29,9 @@ export default function App() {
   const [audioPermission, setAudioPermission] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const cameraRef = useRef<CameraView>(null);
+  const videoRef = useRef(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [status, setStatus] = useState({ isLoaded: false, isPlaying: false });
 
   useEffect(() => {
     // Request microphone permission
@@ -98,51 +109,106 @@ export default function App() {
     router.back();
   };
 
+  const pickImage = async () => {
+    // No permissions request is necessary for launching the image library
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images", "videos"],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.1,
+    });
+
+    console.log(result);
+    setVideoUrl(result.assets[0].uri);
+
+    // if (!result.canceled) {
+    //   setImage(result.assets[0].uri);
+    // }
+  };
+
   return (
-    <CameraView
-      mode="video"
-      ref={cameraRef}
-      style={{ flex: 1 }}
-      facing={facing}
-    >
-      <View className="flex-1 justify-end">
-        <View className="flex-row items-center justify-around mb-10">
+    <View className="flex-1">
+      {videoUrl ? (
+        <View className="flex-1">
           <TouchableOpacity
-            className="justify-end items-end"
-            onPress={toggleCameraFacing}
+            className="absolute z-10 bottom-10 left-36"
+            onPress={saveVideo}
           >
-            <Ionicons name="camera-reverse" size={50} color="transparent" />
+            <Ionicons name="checkmark-circle" size={100} color="white" />
           </TouchableOpacity>
 
-          {videoUrl ? (
-            <TouchableOpacity
-              className="justify-end items-end"
-              onPress={saveVideo}
-            >
-              <Ionicons name="checkmark-circle" size={100} color="white" />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              className="justify-end items-end"
-              onPress={recordVideo}
-            >
-              {!isRecording ? (
-                <Ionicons name="radio-button-on" size={100} color="white" />
-              ) : (
-                <Ionicons name="pause-circle" size={100} color="red" />
-              )}
-            </TouchableOpacity>
-          )}
-
           <TouchableOpacity
-            className="justify-end items-end"
-            onPress={toggleCameraFacing}
+            className="flex-1"
+            onPress={() =>
+              status.isPlaying
+                ? videoRef.current.pauseAsync()
+                : videoRef.current.playAsync()
+            }
           >
-            <Ionicons name="camera-reverse" size={50} color="white" />
+            <Video
+              ref={videoRef}
+              source={{
+                uri: videoUrl,
+              }}
+              // useNativeControls
+              style={{
+                flex: 1,
+                width: Dimensions.get("window").width,
+                height: Dimensions.get("window").height,
+              }}
+              resizeMode={ResizeMode.COVER}
+              isLooping
+              onPlaybackStatusUpdate={(status) => setStatus(() => status)}
+            />
           </TouchableOpacity>
         </View>
-      </View>
-    </CameraView>
+      ) : (
+        <CameraView
+          mode="video"
+          ref={cameraRef}
+          style={{ flex: 1 }}
+          facing={facing}
+        >
+          <View className="flex-1 justify-end">
+            <View className="flex-row items-center justify-around mb-5">
+              <TouchableOpacity
+                className="justify-end items-end"
+                onPress={pickImage}
+              >
+                <Ionicons name="aperture" size={50} color="white" />
+              </TouchableOpacity>
+
+              {videoUrl ? (
+                <TouchableOpacity
+                  className="justify-end items-end"
+                  onPress={saveVideo}
+                >
+                  <Ionicons name="checkmark-circle" size={100} color="white" />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  className="justify-end items-end"
+                  onPress={recordVideo}
+                >
+                  {!isRecording ? (
+                    <Ionicons name="radio-button-on" size={100} color="white" />
+                  ) : (
+                    <Ionicons name="pause-circle" size={100} color="red" />
+                  )}
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                className="justify-end items-end"
+                onPress={toggleCameraFacing}
+              >
+                <Ionicons name="camera-reverse" size={50} color="white" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </CameraView>
+      )}
+    </View>
   );
 }
 
