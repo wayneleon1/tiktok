@@ -29,7 +29,7 @@ export default function App() {
   const [audioPermission, setAudioPermission] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const cameraRef = useRef<CameraView>(null);
-  const videoRef = useRef(null);
+  const videoRef = useRef<Video>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [status, setStatus] = useState({ isLoaded: false, isPlaying: false });
 
@@ -141,8 +141,8 @@ export default function App() {
             className="flex-1"
             onPress={() =>
               status.isPlaying
-                ? videoRef.current.pauseAsync()
-                : videoRef.current.playAsync()
+                ? videoRef.current?.pauseAsync()
+                : videoRef.current?.playAsync()
             }
           >
             <Video
